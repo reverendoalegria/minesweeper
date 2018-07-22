@@ -4,6 +4,8 @@
 # ~~~~
 
 # An example controller showing a sample home page
-GET     /                           controllers.HomeController.index
+GET      /minefield                           controllers.MinesController.getBoard
+POST     /minefield                           controllers.MinesController.createBoard(x: Int, w: Int)
+POST     /minefield/sweep                     controllers.MinesController.createSweep(x: Int, y: Int)
 
       
