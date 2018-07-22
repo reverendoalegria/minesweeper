@@ -13,6 +13,9 @@ case object Mine extends Cell
 
 object Board {
 
+  val DEFAULT_WIDTH = 10
+  val DEFAULT_HEIGHT = 10
+
   /**
     * Boards should be created with a defined height/width
     */

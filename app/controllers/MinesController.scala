@@ -11,7 +11,10 @@ class MinesController @Inject()(cc: ControllerComponents) extends AbstractContro
 
   private var currentBoard: Option[Board] = None
 
-  def createBoard(h: Int, w: Int) = Action {
+  def createBoard = Action { request =>
+    val w = request.getQueryString("width").map(_.toInt).getOrElse(Board.DEFAULT_WIDTH)
+    val h = request.getQueryString("height").map(_.toInt).getOrElse(Board.DEFAULT_HEIGHT)
+
     val newBoard = Board(h, w)
     currentBoard = Some(newBoard)
     Ok(Json.toJson(newBoard))
