@@ -3,8 +3,6 @@ package models
 import java.time.Clock
 import java.util.concurrent.TimeUnit
 
-import controllers._
-
 import scala.concurrent.duration.Duration
 import scala.util.Random
 
@@ -16,11 +14,17 @@ object Board {
 
   val DEFAULT_WIDTH = 10
   val DEFAULT_HEIGHT = 10
+  val DEFAULT_MINES = 10
 
   /**
     * Boards should be created with a defined height/width
     */
-  def apply(h: Int, w: Int, bombs: Int = 10): Board = {
+  def apply(h: Int, w: Int, bombs: Int): Board = {
+    val cells: List[Cell] = buildMinefield(h, w, bombs)
+    new Board(w, h, cells, Seq(), Clock.systemUTC().millis())
+  }
+
+  private def buildMinefield(h: Int, w: Int, bombs: Int) = {
     val rnd = new Random()
     val cellsCount = h * w
     val cellsList = (0 until cellsCount).toList
@@ -29,17 +33,17 @@ object Board {
       if (bombsCells.contains(idx)) Mine
       else Empty
     }
-    new Board(w, h, cells, Seq(), Clock.systemUTC().millis())
+    cells
   }
 }
 
-case class Board(width: Int, height: Int, cells: Seq[Cell], sweepedCellsIndexes: Seq[Int], startTimeMs: Long) {
+case class Board(width: Int, height: Int, cells: Seq[Cell], sweepedCells: Seq[Int], startTimeMs: Long, gameResult: Option[GameResult] = None) {
   def elapsedTimeSeconds: Long = Duration(Clock.systemUTC().millis() - startTimeMs, TimeUnit.MILLISECONDS).toSeconds
 
   def sweep(x: Int, y: Int): (Board, SweepResult) = {
     val cellIdx = (y * width) + x
     val result = cells(cellIdx) match {
-      case Empty if onlyBombsAreCovered => Win
+      case Empty if onlyBombsAreCovered(cellIdx) => Win
       case Empty =>
         findNearBombs(x, y) match {
           case 0 => Clear
@@ -48,19 +52,23 @@ case class Board(width: Int, height: Int, cells: Seq[Cell], sweepedCellsIndexes:
       case Mine => Boom
     }
 
-    withSweep(cellIdx) -> result
+    withSweep(cellIdx, result) -> result
   }
 
-  private def withSweep(cellIdx: Int): Board = {
-    copy(sweepedCellsIndexes = sweepedCellsIndexes :+ cellIdx)
+  private def withSweep(cellIdx: Int, result: SweepResult): Board = {
+    copy(sweepedCells = sweepedCells :+ cellIdx).copy(gameResult = result match {
+      case Win => Some(GameWon)
+      case Boom => Some(GameLost)
+      case _ => None
+    })
   }
 
   /**
     * If only bombs are covered it means user found all non-bombs cells
     */
-  private def onlyBombsAreCovered: Boolean = {
-    val minesIdxList = cells.zipWithIndex.collect { case (Mine, idx) => idx }
-    minesIdxList.sorted == sweepedCellsIndexes.sorted
+  private def onlyBombsAreCovered(excludingIdx: Int): Boolean = {
+    val emptyCellsList = cells.zipWithIndex.collect { case (Empty, idx) => idx }
+    emptyCellsList.sorted == (sweepedCells :+ excludingIdx).sorted
   }
 
   /**
@@ -71,3 +79,12 @@ case class Board(width: Int, height: Int, cells: Seq[Cell], sweepedCellsIndexes:
   }
 }
 
+sealed trait SweepResult
+case object Win extends SweepResult
+case object Boom extends SweepResult
+case class CloseCall(bombs: Int) extends SweepResult
+case object Clear extends SweepResult
+
+sealed trait GameResult
+case object GameWon extends GameResult
+case object GameLost extends GameResult

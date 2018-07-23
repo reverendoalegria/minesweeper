@@ -24,8 +24,9 @@ class MinesController @Inject()(cc: ControllerComponents) extends AbstractContro
   def createBoard = Action { request =>
     val w = request.getQueryString("width").map(_.toInt).getOrElse(Board.DEFAULT_WIDTH)
     val h = request.getQueryString("height").map(_.toInt).getOrElse(Board.DEFAULT_HEIGHT)
+    val m = request.getQueryString("mines").map(_.toInt).getOrElse(Board.DEFAULT_MINES)
 
-    val newBoard = Board(h, w)
+    val newBoard = Board(h, w, m)
     currentBoard = Some(newBoard)
     Ok(Json.toJson(newBoard))
   }
@@ -51,13 +52,13 @@ class MinesController @Inject()(cc: ControllerComponents) extends AbstractContro
 
 }
 
-sealed trait SweepResult
-case object Win extends SweepResult
-case object Boom extends SweepResult
-case class CloseCall(bombs: Int) extends SweepResult
-case object Clear extends SweepResult
-
 trait BoardJsonFormat {
+
+  implicit val resultWrites: Writes[GameResult] = Writes {
+    case GameLost => Json.obj("result" -> "LOST")
+    case GameWon => Json.obj("result" -> "WON")
+  }
+
   implicit val cellWrites: Writes[Cell] = Writes {
     case Empty => Json.obj("cell" -> "EMPTY")
     case Mine => Json.obj("cell" -> "MINE")
