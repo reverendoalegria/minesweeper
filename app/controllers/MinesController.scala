@@ -1,15 +1,25 @@
 package controllers
 
 import javax.inject._
+import models._
+import play.api.data._
+import play.api.data.Forms._
 import play.api.libs.json._
 import play.api.mvc._
-
-import models._
 
 @Singleton
 class MinesController @Inject()(cc: ControllerComponents) extends AbstractController(cc) with BoardJsonFormat with SweepJsonFormat {
 
   private var currentBoard: Option[Board] = None
+
+  case class MineSweepForm(x: Int, y: Int)
+
+  val sweepForm = Form(
+    mapping(
+    "x" -> number,
+    "y" -> number
+    )(MineSweepForm.apply)(MineSweepForm.unapply)
+  )
 
   def createBoard = Action { request =>
     val w = request.getQueryString("width").map(_.toInt).getOrElse(Board.DEFAULT_WIDTH)
@@ -24,12 +34,18 @@ class MinesController @Inject()(cc: ControllerComponents) extends AbstractContro
     currentBoard.map(b => Ok(Json.toJson(b))).getOrElse(NotFound("No minefield was created"))
   }
 
-  def createSweep(x: Int, y: Int) = Action {
-    if (currentBoard.isEmpty) {
-      BadRequest("No minefield was created")
-    } else {
-      val board = currentBoard.get
-      Ok(Json.toJson(board.sweep(x, y)))
+  def createSweep = Action { implicit request =>
+    sweepForm.bindFromRequest().value.map { form =>
+      if (currentBoard.isEmpty) {
+        BadRequest("No minefield was created")
+      } else {
+        val board = currentBoard.get
+        val (newBoard, result) = board.sweep(form.x, form.y)
+        currentBoard = Some(newBoard)
+        Ok(Json.toJson(result))
+      }
+    }.getOrElse {
+      BadRequest("Missing cell row/column parameters (x, y)")
     }
   }
 

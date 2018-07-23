@@ -6,6 +6,6 @@
 # An example controller showing a sample home page
 GET      /minefield                           controllers.MinesController.getBoard
 POST     /minefield                           controllers.MinesController.createBoard
-POST     /minefield/sweep                     controllers.MinesController.createSweep(x: Int, y: Int)
+POST     /minefield/sweep                     controllers.MinesController.createSweep
 
       

@@ -10,8 +10,8 @@ Develop the classic game of Minesweeper
    * When a cell with no adjacent mines is revealed, all adjacent squares will be revealed (and repeat)
    * Time tracking
    * Detect when game is over
+   * Ability to select the game parameters: number of rows, columns, and mines
  * `Make it public-available`
-   * Ability to select the game parameters: number of rows, columns, and mines 
    * Ability to 'flag' a cell with a question mark or red flag
    * Persistence
    * Implement an API client library for the API designed above. Ideally, in a different language, of your preference, to the one used for the API
