@@ -52,7 +52,7 @@ case class Board(width: Int, height: Int, cells: Seq[Cell], sweepedCells: Map[In
     */
   def sweep(x: Int, y: Int): (Board, SweepResult) = {
     val cellIdx = cellIndex(x, y)
-    if (sweepedCells.contains(cellIdx) || cellIdx >= cells.size) this -> Invalid
+    if (sweepedCells.contains(cellIdx) || cellIdx < 0 || cellIdx >= cells.size) this -> Invalid
     else {
       makeSweep(x, y, cellIdx)
     }
@@ -69,28 +69,37 @@ case class Board(width: Int, height: Int, cells: Seq[Cell], sweepedCells: Map[In
   private def cellIndex(x: Int, y: Int): Int = (y * width) + x
 
   private def makeSweep(x: Int, y: Int, cellIdx: Int): (Board, SweepResult) = {
-    val result = cells(cellIdx) match {
-      case Empty if onlyBombsAreCovered(cellIdx) => Win
+    cells(cellIdx) match {
+      case Empty if onlyBombsAreCovered(cellIdx) => withSweep(cellIdx, Win)
       case Empty =>
         findNearBombs(x, y) match {
-          case 0 => Clear
-          case n => CloseCall(n)
+          case 0 =>
+            val (newBoard, _) = withSweep(cellIdx, Clear)
+            val clearedBoard = newBoard.recursiveCleanClearing(x, y)
+            clearedBoard -> Clear
+          case n => withSweep(cellIdx, CloseCall(n))
         }
-      case Mine => Boom
+      case Mine => withSweep(cellIdx, Boom)
     }
+  }
 
-    withSweep(cellIdx, result) -> result
+  private def recursiveCleanClearing(x: Int, y: Int): Board = {
+    nearCells(x, y).
+      filterNot(c => sweepedCells.contains(cellIndex(c.x, c.y))).
+      foldLeft(this) { (board, pos) =>
+        board.sweep(pos.x, pos.y)._1
+    }
   }
 
   /**
    * Sugar for copying this board after a sweep was made
    */
-  private def withSweep(cellIdx: Int, result: SweepResult): Board = {
+  private def withSweep(cellIdx: Int, result: SweepResult): (Board, SweepResult) = {
     copy(sweepedCells = sweepedCells.updated(cellIdx, result)).copy(gameResult = result match {
       case Win => Some(GameWon)
       case Boom => Some(GameLost)
       case _ => None
-    })
+    }) -> result
   }
 
   /**
@@ -100,6 +109,22 @@ case class Board(width: Int, height: Int, cells: Seq[Cell], sweepedCells: Map[In
     val emptyCellsList = cells.zipWithIndex.collect { case (Empty, idx) => idx }
     emptyCellsList.sorted == (sweepedCells.keys.toSeq :+ excludingIdx).sorted
   }
+
+  implicit def intTupleToCellPos( t: (Int, Int) ): CellPos = CellPos(t._1, t._2)
+  case class CellPos(x: Int, y: Int)
+
+  private def nearCells(x: Int, y: Int): Seq[CellPos] = {
+    CellPos(x - 1, y - 1) ::
+    CellPos(x, y - 1) ::
+    CellPos(x + 1, y - 1) ::
+    CellPos(x - 1, y) ::
+    CellPos(x + 1, y) ::
+    CellPos(x - 1, y + 1) ::
+    CellPos(x, y + 1) ::
+    CellPos(x + 1, y + 1) :: Nil
+  }
+
+
 
   /**
     * When a clear cell is found we need to find near bombs and count 'em
@@ -124,6 +149,13 @@ case class Board(width: Int, height: Int, cells: Seq[Cell], sweepedCells: Map[In
 
   private def countBomb(x: Int, y: Int): Int = {
     cell(x, y).count {
+      case Mine => true
+      case _ => false
+    }
+  }
+
+  private def isMine(x: Int, y: Int): Boolean = {
+    cell(x, y).exists {
       case Mine => true
       case _ => false
     }

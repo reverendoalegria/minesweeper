@@ -56,7 +56,7 @@ object ConsoleGame extends App {
 
   def whileGameIsPlaying(width: Int, height: Int, mines: Int)(fn: BoardView => (BoardView, SweepResult)): Option[GameResult] = {
     val (code, txt) = client.start(width, height, mines)
-    println(s"Response for start request: $code > $txt")
+    // println(s"Response for start request: $code > $txt")
 
     def shouldKeepPlaying(gameResult: Option[GameResult], lastSweepResult: Option[SweepResult]): Boolean = {
       gameResult.isEmpty && !lastSweepResult.exists {
