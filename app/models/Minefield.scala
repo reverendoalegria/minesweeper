@@ -84,7 +84,8 @@ case class Board(width: Int, height: Int, cells: Seq[Cell], sweepedCells: Map[In
   }
 
   private def recursiveCleanClearing(x: Int, y: Int): Board = {
-    nearCells(x, y).
+    nearCellsOptions(x, y).
+      filter(c => cell(c.x, c.y).isDefined).
       filterNot(c => sweepedCells.contains(cellIndex(c.x, c.y))).
       foldLeft(this) { (board, pos) =>
         board.sweep(pos.x, pos.y)._1
@@ -113,7 +114,9 @@ case class Board(width: Int, height: Int, cells: Seq[Cell], sweepedCells: Map[In
   implicit def intTupleToCellPos( t: (Int, Int) ): CellPos = CellPos(t._1, t._2)
   case class CellPos(x: Int, y: Int)
 
-  private def nearCells(x: Int, y: Int): Seq[CellPos] = {
+  private def nearCells(x: Int, y: Int): Seq[Cell] = nearCellsOptions(x, y).flatMap(c => cell(c.x, c.y))
+
+  private def nearCellsOptions(x: Int, y: Int): Seq[CellPos] = {
     CellPos(x - 1, y - 1) ::
     CellPos(x, y - 1) ::
     CellPos(x + 1, y - 1) ::

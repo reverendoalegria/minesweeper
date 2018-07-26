@@ -24,16 +24,17 @@ class BoardSpecs extends FlatSpec with Matchers {
   it should "detect win when sweeping last empty cell" in {
     // mine is on (x=0, y=0) in a 3x3 grid
     val cells = Seq(Mine, Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty)
-    val b = Board(3, 3, cells, Map(), Clock.systemUTC().millis())
-    val emptyCells = for {
-      x <- 0 until 3
-      y <- 0 until 3
-      if x + y > 0
-    } yield x -> y
+    val b = Board(3, 3, cells, Map(
+      1 -> CloseCall(1),
+      3 -> CloseCall(1),
+      4 -> CloseCall(1),
+      5 -> Clear,
+      6 -> Clear,
+      7 -> Clear,
+      8 -> Clear),
+      Clock.systemUTC().millis())
 
-    val (lastBoard, lastResult) = emptyCells.foldLeft(b -> (Clear: SweepResult)) { case ((board, res), (x, y)) =>
-      board.sweep(x, y)
-    }
+    val (lastBoard, lastResult) = b.sweep(x = 2, y = 0)
 
     lastResult should matchPattern {
       case Win =>
@@ -43,15 +44,13 @@ class BoardSpecs extends FlatSpec with Matchers {
   }
 
   it should "fail when an already sweeped cell is trying to be swept" in {
-    val b = BoardBuilder(10, 10, 0)
+    val cells = Seq(Mine, Empty, Empty, Empty, Empty, Empty, Empty, Empty, Empty)
+    val b = Board(3, 3, cells, Map(1 -> CloseCall(1)),
+      Clock.systemUTC().millis())
 
-    val (newBoard, res) = b.sweep(0, 0)
-    res.isInstanceOf[Invalid.type] should be (false)
+    val (newBoard, res) = b.sweep(x = 1, y = 0)
+    res.isInstanceOf[Invalid.type] should be (true)
     newBoard.gameResult should be (None)
-
-    val (newBoard1, res1) = newBoard.sweep(0, 0)
-    res1.isInstanceOf[Invalid.type] should be (true)
-    newBoard1.gameResult should be (None)
   }
 
   it should "fail when an invalid cell coordinate is trying to be swept" in {
@@ -86,11 +85,11 @@ class BoardSpecs extends FlatSpec with Matchers {
     // sweeping anything on 2nd row should find near mines: |2|3|2|
     // sweeping anything on 3rd row should give NO-mines near, so should CLEAR all 3rd row on first sweep
     val (board1, result1) = board0.sweep(2,2)
-    board1.gameResult should be (None)
+    board1.gameResult should be (Some(GameWon))
     result1 should be (Clear)
-    board1.sweepedCells.size should be (3)
-    board1.sweepedCells(6) should be (Clear)
-    board1.sweepedCells(7) should be (Clear)
-    board1.sweepedCells(8) should be (Clear)
+    board1.sweepedCells.size should be (6)
+    board1.sweepedCells(3) should be (CloseCall(2))
+    board1.sweepedCells(4) should be (CloseCall(3))
+    board1.sweepedCells(5) should be (CloseCall(2))
   }
 }
