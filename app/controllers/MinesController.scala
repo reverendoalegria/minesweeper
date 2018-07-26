@@ -4,11 +4,12 @@ import javax.inject._
 import models._
 import play.api.data._
 import play.api.data.Forms._
+import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
 import play.api.mvc._
 
 @Singleton
-class MinesController @Inject()(cc: ControllerComponents) extends AbstractController(cc) with BoardJsonFormat with SweepJsonFormat {
+class MinesController @Inject()(cc: ControllerComponents) extends AbstractController(cc) with BoardJsonFormat {
 
   private var currentBoard: Option[Board] = None
 
@@ -22,11 +23,11 @@ class MinesController @Inject()(cc: ControllerComponents) extends AbstractContro
   )
 
   def createBoard = Action { request =>
-    val w = request.getQueryString("width").map(_.toInt).getOrElse(Board.DEFAULT_WIDTH)
-    val h = request.getQueryString("height").map(_.toInt).getOrElse(Board.DEFAULT_HEIGHT)
-    val m = request.getQueryString("mines").map(_.toInt).getOrElse(Board.DEFAULT_MINES)
+    val w = request.getQueryString("width").map(_.toInt).getOrElse(BoardBuilder.DEFAULT_WIDTH)
+    val h = request.getQueryString("height").map(_.toInt).getOrElse(BoardBuilder.DEFAULT_HEIGHT)
+    val m = request.getQueryString("mines").map(_.toInt).getOrElse(BoardBuilder.DEFAULT_MINES)
 
-    val newBoard = Board(h, w, m)
+    val newBoard = BoardBuilder(h, w, m)
     currentBoard = Some(newBoard)
     Ok(Json.toJson(newBoard))
   }
@@ -43,7 +44,7 @@ class MinesController @Inject()(cc: ControllerComponents) extends AbstractContro
         val board = currentBoard.get
         val (newBoard, result) = board.sweep(form.x, form.y)
         currentBoard = Some(newBoard)
-        Ok(Json.toJson(result))
+        Ok(Json.obj("sweepResult" -> result, "board" -> newBoard))
       }
     }.getOrElse {
       BadRequest("Missing cell row/column parameters (x, y)")
@@ -59,19 +60,33 @@ trait BoardJsonFormat {
     case GameWon => Json.obj("result" -> "WON")
   }
 
-  implicit val cellWrites: Writes[Cell] = Writes {
-    case Empty => Json.obj("cell" -> "EMPTY")
-    case Mine => Json.obj("cell" -> "MINE")
-  }
-
-  implicit val boardWrites: OWrites[Board] = Json.writes[Board]
-}
-
-trait SweepJsonFormat {
   implicit val sweepWrites: Writes[SweepResult] = Writes {
     case Win => Json.obj("result" -> "WIN")
     case Boom => Json.obj("result" -> "BOOM")
     case CloseCall(n) => Json.obj("result" -> "NEAR", "count" -> n)
     case Clear => Json.obj("result" -> "CLEAR")
+    case Invalid => Json.obj("result" -> "INVALID")
+  }
+
+  implicit val cellWrites: Writes[Cell] = Writes {
+    case Empty => Json.obj("cell" -> "EMPTY")
+    case Mine => Json.obj("cell" -> "MINE")
+  }
+
+  implicit val mapWrites: Writes[Map[Int, SweepResult]] = Writes[Map[Int, SweepResult]] { objectMap =>
+      Json.obj(
+        objectMap.map {
+          case (s, o) => s.toString -> (Json.toJson(o): JsValueWrapper)
+      }.toSeq:_*)
+  }
+
+  implicit val boardWrites: OWrites[Board] = OWrites[Board] { b =>
+    Json.obj(
+      "width" -> b.width,
+      "height" -> b.height,
+      "sweepedCells" -> Json.toJson(b.sweepedCells),
+      "startTimeMs" -> b.startTimeMs,
+      "gameResult" -> b.gameResult
+    )
   }
 }
