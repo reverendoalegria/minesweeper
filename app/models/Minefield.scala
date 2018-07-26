@@ -44,6 +44,12 @@ object BoardBuilder {
 case class Board(width: Int, height: Int, cells: Seq[Cell], sweepedCells: Map[Int, SweepResult], startTimeMs: Long, gameResult: Option[GameResult] = None) {
   def elapsedTimeSeconds: Long = Duration(Clock.systemUTC().millis() - startTimeMs, TimeUnit.MILLISECONDS).toSeconds
 
+  /**
+    * Sweep a cell. A new board is provided with updated state,
+    * as well as consequences for this action (#SweepResult).
+    * If a mine was hit, Game is lost, which is indicated both in Board#gameResult
+    * and SweepResult.
+    */
   def sweep(x: Int, y: Int): (Board, SweepResult) = {
     val cellIdx = cellIndex(x, y)
     if (sweepedCells.contains(cellIdx) || cellIdx >= cells.size) this -> Invalid
@@ -52,12 +58,15 @@ case class Board(width: Int, height: Int, cells: Seq[Cell], sweepedCells: Map[In
     }
   }
 
+  /**
+    * Find a cell given its coordinates
+    */
   def cell(x: Int, y: Int): Option[Cell] = {
     if (x < 0 || x >= width || y < 0 || y >= height) None
     else Option(cells(cellIndex(x, y)))
   }
 
-  def cellIndex(x: Int, y: Int): Int = (y * width) + x
+  private def cellIndex(x: Int, y: Int): Int = (y * width) + x
 
   private def makeSweep(x: Int, y: Int, cellIdx: Int): (Board, SweepResult) = {
     val result = cells(cellIdx) match {
@@ -73,8 +82,8 @@ case class Board(width: Int, height: Int, cells: Seq[Cell], sweepedCells: Map[In
     withSweep(cellIdx, result) -> result
   }
 
-  /*
-    Sugar for copying this board after a sweep was made
+  /**
+   * Sugar for copying this board after a sweep was made
    */
   private def withSweep(cellIdx: Int, result: SweepResult): Board = {
     copy(sweepedCells = sweepedCells.updated(cellIdx, result)).copy(gameResult = result match {
