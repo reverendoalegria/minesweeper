@@ -46,10 +46,15 @@ case class Board(width: Int, height: Int, cells: Seq[Cell], sweepedCells: Map[In
 
   def sweep(x: Int, y: Int): (Board, SweepResult) = {
     val cellIdx = cellIndex(x, y)
-    if (sweepedCells.contains(cellIdx)) this -> Invalid
+    if (sweepedCells.contains(cellIdx) || cellIdx >= cells.size) this -> Invalid
     else {
       makeSweep(x, y, cellIdx)
     }
+  }
+
+  def cell(x: Int, y: Int): Option[Cell] = {
+    if (x < 0 || x >= width || y < 0 || y >= height) None
+    else Option(cells(cellIndex(x, y)))
   }
 
   def cellIndex(x: Int, y: Int): Int = (y * width) + x
@@ -91,7 +96,28 @@ case class Board(width: Int, height: Int, cells: Seq[Cell], sweepedCells: Map[In
     * When a clear cell is found we need to find near bombs and count 'em
     */
   private def findNearBombs(x: Int, y: Int): Int = {
-    0
+    /*
+        -------
+        |x-1,y-1|x,y-1|x+1,y-1|
+        |x-1,y  | X,Y |x+1,y  |
+        |x-1,y+1|x,y+1|x+1,y+1|
+        -------
+     */
+    countBomb(x - 1, y - 1) +
+    countBomb(x, y - 1) +
+    countBomb(x + 1, y - 1) +
+    countBomb(x - 1, y) +
+    countBomb(x + 1, y) +
+    countBomb(x - 1, y + 1) +
+    countBomb(x, y + 1) +
+    countBomb(x + 1, y + 1)
+  }
+
+  private def countBomb(x: Int, y: Int): Int = {
+    cell(x, y).count {
+      case Mine => true
+      case _ => false
+    }
   }
 }
 

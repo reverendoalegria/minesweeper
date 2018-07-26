@@ -5,10 +5,12 @@ import play.api.libs.ws.EmptyBody
 import scala.concurrent.{Await, ExecutionContext}
 import scala.io.StdIn
 
+
 object ConsoleGame extends App {
+  import scala.concurrent.ExecutionContext.Implicits._
 
   val url = "http://localhost:9000"
-  import scala.concurrent.ExecutionContext.Implicits._
+
   val client = new MinefieldClient(url)
 
   var input: String = ""
@@ -20,7 +22,7 @@ object ConsoleGame extends App {
       """.stripMargin)
     StdIn.readInt() match {
       case 1 => startGame()
-      case 0 => sys.exit()
+      case _ => sys.exit()
     }
   } while (input.nonEmpty)
 
@@ -30,7 +32,11 @@ object ConsoleGame extends App {
 
   def startGame(): Unit = {
 
-    val result = whileGameIsPlaying { board =>
+    val width = readConsoleInt("Enter width: ")
+    val height = readConsoleInt("Enter height: ")
+    val mines = readConsoleInt("Enter mines: ")
+
+    val result = whileGameIsPlaying(width, height, mines) { board =>
       drawBoard(board)
       val (x, y) = askCoordinates()
       client.sweep(x, y)
@@ -44,8 +50,12 @@ object ConsoleGame extends App {
     sys.exit(1)
   }
 
-  def whileGameIsPlaying(fn: BoardView => (BoardView, SweepResult)): Option[GameResult] = {
-    val (code, txt) = client.start()
+  def readConsoleInt(msg: String): Int = {
+    println(msg); StdIn.readInt()
+  }
+
+  def whileGameIsPlaying(width: Int, height: Int, mines: Int)(fn: BoardView => (BoardView, SweepResult)): Option[GameResult] = {
+    val (code, txt) = client.start(width, height, mines)
     println(s"Response for start request: $code > $txt")
 
     def shouldKeepPlaying(gameResult: Option[GameResult], lastSweepResult: Option[SweepResult]): Boolean = {
@@ -107,8 +117,13 @@ class MinefieldClient(url: String)(implicit ec: ExecutionContext) extends Minefi
   private implicit val materializer: ActorMaterializer = ActorMaterializer()
   private val ws = AhcWSClient()
 
-  def start(): (Int, String) = {
-    Await.result(ws.url(s"$url/minefield").post(EmptyBody).map(r => r.status -> r.body), TIMEOUT_DURATION)
+  def start(width: Int, height: Int, mines: Int): (Int, String) = {
+    Await.result(ws.url(s"$url/minefield").
+      withQueryStringParameters(
+        "width" -> width.toString,
+        "height" -> height.toString,
+        "mines" -> mines.toString
+      ).post(EmptyBody).map(r => r.status -> r.body), TIMEOUT_DURATION)
   }
 
   def sweep(x: Int, y: Int): (BoardView, SweepResult) = {
