@@ -127,8 +127,6 @@ case class Board(width: Int, height: Int, cells: Seq[Cell], sweepedCells: Map[In
     CellPos(x + 1, y + 1) :: Nil
   }
 
-
-
   /**
     * When a clear cell is found we need to find near bombs and count 'em
     */

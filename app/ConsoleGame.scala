@@ -1,6 +1,5 @@
 import models._
 import play.api.libs.json._
-import play.api.libs.ws.EmptyBody
 
 import scala.concurrent.{Await, ExecutionContext}
 import scala.io.StdIn
@@ -55,8 +54,7 @@ object ConsoleGame extends App {
   }
 
   def whileGameIsPlaying(width: Int, height: Int, mines: Int)(fn: BoardView => (BoardView, SweepResult)): Option[GameResult] = {
-    val (code, txt) = client.start(width, height, mines)
-    // println(s"Response for start request: $code > $txt")
+    client.start(width, height, mines)
 
     def shouldKeepPlaying(gameResult: Option[GameResult], lastSweepResult: Option[SweepResult]): Boolean = {
       gameResult.isEmpty && !lastSweepResult.exists {
@@ -119,11 +117,11 @@ class MinefieldClient(url: String)(implicit ec: ExecutionContext) extends Minefi
 
   def start(width: Int, height: Int, mines: Int): (Int, String) = {
     Await.result(ws.url(s"$url/minefield").
-      withQueryStringParameters(
+      post(Map(
         "width" -> width.toString,
         "height" -> height.toString,
         "mines" -> mines.toString
-      ).post(EmptyBody).map(r => r.status -> r.body), TIMEOUT_DURATION)
+      )).map(r => r.status -> r.body), TIMEOUT_DURATION)
   }
 
   def sweep(x: Int, y: Int): (BoardView, SweepResult) = {

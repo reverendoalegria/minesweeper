@@ -22,10 +22,15 @@ class MinesController @Inject()(cc: ControllerComponents) extends AbstractContro
     )(MineSweepForm.apply)(MineSweepForm.unapply)
   )
 
-  def createBoard = Action { request =>
-    val w = request.getQueryString("width").map(_.toInt).getOrElse(BoardBuilder.DEFAULT_WIDTH)
-    val h = request.getQueryString("height").map(_.toInt).getOrElse(BoardBuilder.DEFAULT_HEIGHT)
-    val m = request.getQueryString("mines").map(_.toInt).getOrElse(BoardBuilder.DEFAULT_MINES)
+  private def getFormIntValue(n: String, default: Int)(implicit request: Request[AnyContent]): Int = {
+    val formMap = request.body.asFormUrlEncoded.getOrElse(Map())
+    formMap.get(n).flatMap(_.headOption).map(_.toInt).getOrElse(default)
+  }
+
+  def createBoard = Action { implicit request =>
+    val w = getFormIntValue("width", BoardBuilder.DEFAULT_WIDTH)
+    val h = getFormIntValue("height", BoardBuilder.DEFAULT_HEIGHT)
+    val m = getFormIntValue("mines", BoardBuilder.DEFAULT_MINES)
 
     val newBoard = BoardBuilder(h, w, m)
     currentBoard = Some(newBoard)
