@@ -36,6 +36,10 @@ Develop the classic game of Minesweeper
  * For simplicity, each Sweep replies with the updated minefield, assuming the client will be interested. 
  For sure not the restful approach.
  
+## Postman Docs
+ * https://documenter.getpostman.com/collection/view/65676-6ce80714-ed9b-4b61-8b3c-205426a85884
+ * https://www.getpostman.com/collections/2668e84bdbe1a0f8a9e2  (json document to import)
+ 
 ## How to Play
  * Create a Minefield
    * `POST http://minesweeper.romangarcia.net/minefield?width=10&height=10&mines=50`

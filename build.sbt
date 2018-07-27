@@ -1,6 +1,6 @@
 name := "minesweeper"
  
-version := "1.2"
+version := "1.3"
 
 organization := "romangarcia"
       
