@@ -62,7 +62,7 @@ class BoardSpecs extends FlatSpec with Matchers {
 
   it should "find near mines when sweeping a close call" in {
     // mines are on (x=0, y=0) and (x=1, y=0) in a 3x3 grid
-    // sweeping (x=0, y=1) should find 2 near mines
+    // sweeping (x=0, y=1) should find 2 near minese
     val cells = Seq(Mine, Mine, Empty, Empty, Empty, Empty, Empty, Empty, Empty)
     val board0 = Board(3, 3, cells, Map(), Clock.systemUTC().millis())
     val (board1, sweepResult1) = board0.sweep(x = 0, y = 1)

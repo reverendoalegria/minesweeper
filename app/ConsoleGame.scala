@@ -9,7 +9,7 @@ import scala.io.StdIn
 object ConsoleGame extends App {
   import scala.concurrent.ExecutionContext.Implicits._
 
-  val url = "http://localhost:9000"
+  val url = if (args.length > 0) args(0) else "http://localhost:9000"
 
   val client = new MinefieldClient(url)
 
